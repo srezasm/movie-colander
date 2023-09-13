@@ -64,7 +64,19 @@ def ask_for_web_page_url() -> str:
         inquirer.Text(
             "url",
             message="Enter web-page URL",
-            # validate=validator,
+            validate=validator,
+        )
+    ]
+    answers = inquirer.prompt(questions)
+
+    return answers["url"]
+
+def ask_to_select_url(urls: list[str]) -> str:
+    questions = [
+        inquirer.List(
+            "url",
+            message="Select one to download",
+            choices=urls,
         )
     ]
     answers = inquirer.prompt(questions)
