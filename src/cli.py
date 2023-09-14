@@ -71,18 +71,18 @@ def ask_for_web_page_url() -> str:
 
     return answers["url"]
 
-def ask_to_select_url(urls: list[str]) -> str:
+def ask_to_select_urls(urls: list[str]) -> str:
+    names = [url.split("/")[-1] for url in urls]
     questions = [
-        inquirer.List(
-            "url",
-            message="Select one to download",
-            choices=urls,
+        inquirer.Checkbox(
+            "urls",
+            message="Select the urls you want to download",
+            choices=tuple(zip(names, urls)),
         )
     ]
     answers = inquirer.prompt(questions)
 
-    return answers["url"]
-
+    return answers["urls"]
 
 def print_movies(movies: list[str]) -> None:
     print("[bold]Movies:[/bold]")
