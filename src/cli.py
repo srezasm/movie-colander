@@ -73,14 +73,19 @@ def ask_for_web_page_url() -> str:
 
 def ask_to_select_urls(urls: list[str]) -> str:
     names = [url.split("/")[-1] for url in urls]
+    choices = (("All", "all"),) + tuple(zip(names, urls))
+
     questions = [
         inquirer.Checkbox(
             "urls",
-            message="Select the urls you want to download",
-            choices=tuple(zip(names, urls)),
+            message="Select urls to download",
+            choices=choices,
         )
     ]
     answers = inquirer.prompt(questions)
+
+    if "all" in answers["urls"]:
+        return urls
 
     return answers["urls"]
 

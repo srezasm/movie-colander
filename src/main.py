@@ -8,7 +8,6 @@ def main():
     clear_terminal()
     print_banner()
     
-    # url = ask_for_web_page_url()
     url = input("Enter web-page URL: ")
 
     movie_urls = extract_movie_urls(url)
