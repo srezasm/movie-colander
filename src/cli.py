@@ -3,6 +3,7 @@ from platform import platform
 from os import system
 from rich import print
 from shutil import get_terminal_size
+from urllib.parse import unquote
 import re
 
 
@@ -47,33 +48,64 @@ def clear_terminal() -> None:
 
 
 def ask_for_web_page_url() -> str:
-    # Django URL validator
-    def validator(input_, _):
-        regex = re.compile(
-            r"^https?://"  # http:// or https://
-            r"(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|"  # domain...
-            r"localhost|"  # localhost...
-            r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"  # ...or ip
-            r"(?::\d+)?"  # optional port
-            r"(?:/?|[/?]\S+)$",
-            re.IGNORECASE,
-        )
-        return input_ is not None and len(input_) > 0 and regex.search(input_)
+    ip_middle_octet = u"(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5]))"
+    ip_last_octet = u"(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))"
 
-    questions = [
-        inquirer.Text(
-            "url",
-            message="Enter web-page URL",
-            validate=validator,
-        )
-    ]
-    answers = inquirer.prompt(questions)
+    regex = re.compile(
+        u"^"
+        # protocol identifier
+        u"(?:(?:https?|ftp)://)"
+        # user:pass authentication
+        u"(?:\S+(?::\S*)?@)?"
+        u"(?:"
+        u"(?P<private_ip>"
+        # IP address exclusion
+        # private & local networks
+        u"(?:(?:10|127)" + ip_middle_octet + u"{2}" + ip_last_octet + u")|"
+        u"(?:(?:169\.254|192\.168)" + ip_middle_octet + ip_last_octet + u")|"
+        u"(?:172\.(?:1[6-9]|2\d|3[0-1])" + \
+        ip_middle_octet + ip_last_octet + u"))"
+        u"|"
+        # IP address dotted notation octets
+        # excludes loopback network 0.0.0.0
+        # excludes reserved space >= 224.0.0.0
+        # excludes network & broadcast addresses
+        # (first & last IP address of each class)
+        u"(?P<public_ip>"
+        u"(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])"
+        u"" + ip_middle_octet + u"{2}"
+        u"" + ip_last_octet + u")"
+        u"|"
+        # host name
+        u"(?:(?:[a-z\u00a1-\uffff0-9]-?)*[a-z\u00a1-\uffff0-9]+)"
+        # domain name
+        u"(?:\.(?:[a-z\u00a1-\uffff0-9]-?)*[a-z\u00a1-\uffff0-9]+)*"
+        # TLD identifier
+        u"(?:\.(?:[a-z\u00a1-\uffff]{2,}))"
+        u")"
+        # port number
+        u"(?::\d{2,5})?"
+        # resource path
+        u"(?:/\S*)?"
+        # query string
+        u"(?:\?\S*)?"
+        u"$",
+        re.UNICODE | re.IGNORECASE
+    )
 
-    return answers["url"]
+    while True:
+        url = input('Please enter the URL: ')
+        if re.match(regex, url):
+            break
+        print('[red]Entered URL is invalid.[/red]')
+
+    return url
+
 
 def ask_to_select_urls(urls: list[str]) -> str:
-    names = [url.split("/")[-1] for url in urls]
-    choices = (("All", "all"),) + tuple(zip(names, urls))
+    names = [unquote(url.split("/")[-1]) for url in urls]
+    choices = [("All", "all")] + [(name, url)
+                                  for name, url in zip(names, urls)]
 
     questions = [
         inquirer.Checkbox(
@@ -89,11 +121,6 @@ def ask_to_select_urls(urls: list[str]) -> str:
 
     return answers["urls"]
 
-def print_movies(movies: list[str]) -> None:
-    print("[bold]Movies:[/bold]")
-    for movie in movies:
-        print(f"  [green]{movie}[/green]")
-
 
 def ask_confirmation(message: str) -> bool:
     questions = [
@@ -106,7 +133,3 @@ def ask_confirmation(message: str) -> bool:
     answers = inquirer.prompt(questions)
 
     return answers["save"]
-
-
-def print_file_name(file_name: str) -> None:
-    print(f"[blue]{file_name}[/blue]")
